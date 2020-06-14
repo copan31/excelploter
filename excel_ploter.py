@@ -1,5 +1,7 @@
 import pandas as pd
+from openpyxl import load_workbook
 from openpyxl.chart import Reference, LineChart, AreaChart
+import os
 
 class A:
     def __init__(self, csvfile):
@@ -7,27 +9,19 @@ class A:
         self._df["DateTime"] = pd.to_datetime(self._df["公表_年月日"])
         self._df = self._df.set_index("DateTime")
         self._file = "test.xlsx"
-        self._sheetname = "test"
         print(self._df)
 
-    def _plot(self, chart, title, xlabel, ylabel, col_start = 0, col_end = 0, col_step = 0):
-        if col_start == 0:
-            col_start = 2 # データの開始列
-        if col_end == 0:
-            col_end = len(self._df.columns) + 1 # データの終了列
+    def _plot(self, sheet, chart, title, xlabel, ylabel):
+        # plot on the sheet
+        chart.title = title
+        chart.x_axis.title = xlabel
+        chart.y_axis.title = ylabel
+        chart.add_data(Reference(sheet, min_col = 2, max_col = len(self._df.columns) + 1, min_row = 1, max_row = sheet.max_row), titles_from_data = True)
+        chart.set_categories(Reference(sheet, min_col = 1, max_col = 1, min_row = 2, max_row = sheet.max_row)) # ラベル
+        sheet.add_chart(chart, "A1")
 
-        with pd.ExcelWriter(self._file) as writer:
-            # write the df on excel at once
-            self._df.to_excel(writer, sheet_name=self._sheetname)
-
-            # plot on the sheet
-            sheet = writer.book.active
-            chart.title = title
-            chart.x_axis.title = xlabel
-            chart.y_axis.title = ylabel
-            chart.add_data(Reference(sheet, min_col = col_start, max_col = col_end, min_row = 1, max_row = sheet.max_row), titles_from_data = True)
-            chart.set_categories(Reference(sheet, min_col = 1, max_col = 1, min_row = 2, max_row = sheet.max_row)) # ラベル
-            sheet.add_chart(chart, "A1")
+    def reload(self):
+        self._df = pd.read_csv(csvfile)
 
     def print(self):
         print(self._df)
@@ -35,19 +29,37 @@ class A:
     def plot_bar(self):
         pass
 
-    def plot_line(self, column, value):
-        self._df = self._df[[value, column]].pivot_table(index = "DateTime", values = value, columns = column, fill_value = 0)
+    def plot_line(self, sheetname, column, value):
+        # 必要な値と項目を残した時系列データを作成
+        df = self._df[[value, column]].pivot_table(index = "DateTime", values = value, columns = column, fill_value = 0)
 
-        chart = LineChart()
-        self._plot(chart, title = "線グラフ", xlabel = "日付", ylabel = "回数")
+        with pd.ExcelWriter(self._file) as writer:
+            # excelファイルがあるなら追加書きする
+            if os.path.isfile(self._file):
+                writer.book = load_workbook(self._file)
+            # write the df on excel at once
+            df.to_excel(writer, sheet_name = sheetname)
 
-    def plot_Area(self, column, value):
-        self._df = self._df[[value, column]].pivot_table(index = "DateTime", values = value, columns = column, fill_value = 0)
-        self.print()
+            # plot line chart
+            chart = LineChart()            
+            self._plot(writer.book[sheetname], chart, title = "線グラフ", xlabel = "日付", ylabel = "回数")
 
-        chart = AreaChart()
-        chart.grouping = "stacked"
-        self._plot(chart, title = "面グラフ", xlabel = "日付", ylabel = "回数")
+    def plot_Area(self, sheetname, column, value):
+        # 必要な値と項目を残した時系列データを作成
+        df = self._df[[value, column]].pivot_table(index = "DateTime", values = value, columns = column, fill_value = 0)
+
+        with pd.ExcelWriter(self._file) as writer:
+            # excelファイルがあるなら追加書きする
+            if os.path.isfile(self._file):
+                writer.book = load_workbook(self._file)
+
+            # write the df on excel at once
+            df.to_excel(writer, sheet_name = sheetname)
+
+            # plot Area chart
+            chart = AreaChart()
+            chart.grouping = "stacked"
+            self._plot(writer.book[sheetname], chart, title = "面グラフ", xlabel = "日付", ylabel = "回数")
 
     def plot_Stack(self, column, value, unit):
         self._df = self._df[[value, column]].pivot_table(index = "DateTime", values = value, columns = column, fill_value = 0)
@@ -66,5 +78,5 @@ class A:
 if __name__ == "__main__":
     csvfile = "130001_tokyo_covid19_patients(1).csv"
     a = A(csvfile)
-    a.plot_Area(column = "患者_年代", value = "退院済フラグ")
-    # a.plot_line(column = "患者_年代", value = "退院済フラグ")
+    a.plot_line(sheetname = "Line", column = "患者_年代", value = "退院済フラグ")
+    a.plot_Area(sheetname = "Area", column = "患者_年代", value = "退院済フラグ")
