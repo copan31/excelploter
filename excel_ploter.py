@@ -1,6 +1,6 @@
 import pandas as pd
 from openpyxl import load_workbook
-from openpyxl.chart import Reference, LineChart, AreaChart
+from openpyxl.chart import Reference, LineChart, AreaChart, BarChart
 import os
 
 class A:
@@ -61,11 +61,26 @@ class A:
             chart.grouping = "stacked"
             self._plot(writer.book[sheetname], chart, title = "面グラフ", xlabel = "日付", ylabel = "回数")
 
-    def plot_Stack(self, column, value, unit):
-        self._df = self._df[[value, column]].pivot_table(index = "DateTime", values = value, columns = column, fill_value = 0)
-        self._df = self._df.resample(unit).sum()
+    def plot_Stack(self, sheetname, column, value, unit):
+        df = self._df[[value, column]].pivot_table(index = "DateTime", values = value, columns = column, fill_value = 0)
+        df = df.resample(unit).sum()
 
         # self._df.to_csv("a.csv", index = True, header = True, encoding='utf_8_sig')
+
+        with pd.ExcelWriter(self._file) as writer:
+            # excelファイルがあるなら追加書きする
+            if os.path.isfile(self._file):
+                writer.book = load_workbook(self._file)
+
+            # write the df on excel at once
+            df.to_excel(writer, sheet_name = sheetname)
+
+            # plot Area chart
+            chart = BarChart()
+            chart.type = "col"
+            chart.grouping = "stacked"
+            chart.overlap = 100
+            self._plot(writer.book[sheetname], chart, title = "積み上げ棒グラフ", xlabel = "月", ylabel = "回数")
 
     def plot_test(self):
         sep = 4
@@ -78,5 +93,6 @@ class A:
 if __name__ == "__main__":
     csvfile = "130001_tokyo_covid19_patients(1).csv"
     a = A(csvfile)
-    a.plot_line(sheetname = "Line", column = "患者_年代", value = "退院済フラグ")
-    a.plot_Area(sheetname = "Area", column = "患者_年代", value = "退院済フラグ")
+    # a.plot_line(sheetname = "Line", column = "患者_年代", value = "退院済フラグ")
+    # a.plot_Area(sheetname = "Area", column = "患者_年代", value = "退院済フラグ")
+    a.plot_Stack(sheetname = "Stack", column = "患者_年代", value = "退院済フラグ", unit = 'M')
