@@ -11,12 +11,16 @@ class A:
         self._file = "test.xlsx"
         print(self._df)
 
-    def _plot(self, sheet, chart, title, xlabel, ylabel):
+    def _plot(self, sheet, chart, title, xlabel, ylabel, ymax = 0):
         # plot on the sheet
         chart.title = title
         chart.x_axis.title = xlabel
         chart.y_axis.title = ylabel
-        chart.add_data(Reference(sheet, min_col = 2, max_col = len(self._df.columns) + 1, min_row = 1, max_row = sheet.max_row), titles_from_data = True)
+        chart.y_axis.scaling.min = 0
+        if ymax != 0:
+            chart.y_axis.scaling.max = ymax # 指定があるならy軸の最大値を設定
+        chart.legend.position = 'r' # 凡例は右に設定
+        chart.add_data(Reference(sheet, min_col = 2, max_col = sheet.max_column, min_row = 1, max_row = sheet.max_row), titles_from_data = True)
         chart.set_categories(Reference(sheet, min_col = 1, max_col = 1, min_row = 2, max_row = sheet.max_row)) # ラベル
         sheet.add_chart(chart, "A1")
 
@@ -93,6 +97,6 @@ class A:
 if __name__ == "__main__":
     csvfile = "130001_tokyo_covid19_patients(1).csv"
     a = A(csvfile)
-    # a.plot_line(sheetname = "Line", column = "患者_年代", value = "退院済フラグ")
-    # a.plot_Area(sheetname = "Area", column = "患者_年代", value = "退院済フラグ")
+    a.plot_line(sheetname = "Line", column = "患者_年代", value = "退院済フラグ")
+    a.plot_Area(sheetname = "Area", column = "患者_年代", value = "退院済フラグ")
     a.plot_Stack(sheetname = "Stack", column = "患者_年代", value = "退院済フラグ", unit = 'M')
