@@ -120,8 +120,5 @@ class ExcelPloter:
 
 if __name__ == "__main__":
     csvfile = "130001_tokyo_covid19_patients(1).csv"
+    csvfile = "sample_pandas_normal.csv"
     a = ExcelPloter(csvfile)
-    a.plot_line(sheetname = "Line", column = "患者_年代", value = "退院済フラグ")
-    a.plot_area(sheetname = "Area", column = "患者_年代", value = "退院済フラグ")
-    a.plot_stack(sheetname = "Stack", column = "患者_年代", value = "退院済フラグ", unit = 'M')
-    a.plot_stack_mult(sheetname = "Stack_m", column = "患者_年代", value = "退院済フラグ", unit = 'M')
